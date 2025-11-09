@@ -7,6 +7,9 @@ import com.example.cooking.dao.repository.RecipeRepository;
 import com.example.cooking.dto.CookingRuntime;
 import com.example.cooking.service.CookingService;
 import com.example.cooking.utils.TimeParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +23,9 @@ public class CookingServiceImpl implements CookingService {
     private final Map<String, CookingRuntime> cookingMap = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8);
 
-    private final RecipeRepository recipeRepository;  // to change name
+    private final RecipeRepository recipeRepository;
+
+    private static final ObjectMapper M = new ObjectMapper();
 
     // create session from dishNames JSON array node (from WsHandler)
     public Boolean createSessionWithDishNames(String sid, com.fasterxml.jackson.databind.JsonNode dishNamesNode) {
@@ -66,6 +71,8 @@ public class CookingServiceImpl implements CookingService {
     }
 
 
+
+
     // 客户端主动拉取下一步（并消费）
     public String pollNextStepAndConsume(String sid) {
         CookingRuntime cookingRuntime = cookingMap.get(sid);
@@ -77,6 +84,7 @@ public class CookingServiceImpl implements CookingService {
             return null;
         }
         Recipe curRecipe = recipes.get(curRecipeIdx);
+        String dishName = curRecipe.getDishName();
 
         Map<Integer,Integer> stepMap = cookingRuntime.getStepMap();
         // 取当前一步
@@ -88,7 +96,7 @@ public class CookingServiceImpl implements CookingService {
         Step step = curRecipe.getSteps().get(curStepIdx);
         if(step.getIsBlockable()){
             System.out.println("当前步isblockable，直接返回让用户确认");
-            return step.toString();
+            return toJsonStep(dishName, step);
         }
 
         stepMap.put(curRecipeIdx, stepMap.get(curRecipeIdx) + 1);
@@ -98,7 +106,7 @@ public class CookingServiceImpl implements CookingService {
             curStepIdx = stepMap.get(curRecipeIdx);
         }
         cookingRuntime.setCurrentRecipeIndex(curRecipeIdx);
-        return step.toString();
+        return toJsonStep(dishName, step);
     }
 
     public Boolean startBlockabled(String sid){
@@ -158,6 +166,7 @@ public class CookingServiceImpl implements CookingService {
             WsHandler.sendToWsSession(sid, "BLOCK_FINISHED, NEXT STEP: NONE\n");
         }
         Recipe curRecipe = recipes.get(curRecipeIdx);
+        String dishName = curRecipe.getDishName();
 
         Map<Integer,Integer> stepMap = cookingRuntime.getStepMap();
         // 取当前一步
@@ -176,6 +185,13 @@ public class CookingServiceImpl implements CookingService {
         }
         cookingRuntime.setCurrentRecipeIndex(curRecipeIdx);
 
-        WsHandler.sendToWsSession(sid, "BLOCK_FINISHED, NEXT STEP: \n" + step.toString());
+        WsHandler.sendToWsSession(sid, "BLOCK_FINISHED, NEXT STEP: \n" + toJsonStep(dishName, step));
+    }
+
+    private String toJsonStep(String recipeName, Step step){
+        ObjectNode node = M.createObjectNode().put("dishName", recipeName);
+        JsonNode stepNode = M.valueToTree(step);
+        node.setAll((ObjectNode) stepNode);
+        return node.toString();
     }
 }
