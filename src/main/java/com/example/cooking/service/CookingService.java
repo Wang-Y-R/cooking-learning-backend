@@ -11,7 +11,7 @@ public interface CookingService {
     Boolean createSessionWithDishNames(String sid, JsonNode dishesName);
 
 
-    String pollNextStepAndConsume(String sid);
+    Boolean pollNextStepAndConsume(String sid);
 
     Boolean startBlockabled(String sid);
 

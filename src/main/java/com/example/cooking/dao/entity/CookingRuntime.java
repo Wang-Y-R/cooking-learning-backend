@@ -1,6 +1,5 @@
-package com.example.cooking.dto;
+package com.example.cooking.dao.entity;
 
-import com.example.cooking.dao.entity.Recipe;
 import lombok.Builder;
 import lombok.Data;
 
@@ -18,5 +17,5 @@ public class CookingRuntime {
 
     private Map<Integer, Integer> stepMap;  // 菜idx : 当前菜步骤idx
 
-    private Map<String, ScheduledFuture<?>> taskMap;  // "菜idx + 当前菜步骤idx" : task
+    private Map<String, ScheduledFuture<?>> taskMap;  // "菜idx+当前菜步骤idx" : task
 }

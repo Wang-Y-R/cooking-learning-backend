@@ -1,10 +1,12 @@
 package com.example.cooking.service.impl;
 
-import com.example.cooking.common.web.WsHandler;
+import com.example.cooking.common.convention.wsmessage.WSMessage;
+import com.example.cooking.common.web.WebSocketManager;
+import com.example.cooking.handler.WsHandler;
 import com.example.cooking.dao.entity.Recipe;
 import com.example.cooking.dao.entity.Step;
 import com.example.cooking.dao.repository.RecipeRepository;
-import com.example.cooking.dto.CookingRuntime;
+import com.example.cooking.dao.entity.CookingRuntime;
 import com.example.cooking.service.CookingService;
 import com.example.cooking.utils.TimeParser;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -16,10 +18,13 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.concurrent.*;
 
+import static com.example.cooking.common.constant.WSMessageType.*;
+
 @Service
 @RequiredArgsConstructor
 public class CookingServiceImpl implements CookingService {
 
+    private final WebSocketManager webSocketManager;
     private final Map<String, CookingRuntime> cookingMap = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8);
 
@@ -72,21 +77,36 @@ public class CookingServiceImpl implements CookingService {
     }
 
     // 客户端主动拉取下一步（并消费）
-    public String pollNextStepAndConsume(String sid) {
+    public Boolean pollNextStepAndConsume(String sid) {
         if(!currentRecipeExist(sid)){
             if(!checkTasksExist(sid)) {
                 // 没有下一步且没有菜在等待
-                WsHandler.sendToWsSession(sid, "all dishes done");
+                webSocketManager.send(sid,
+                        WSMessage.buildSuccess(NO_NEXT_STEP, "All dishes done !", null)
+                );
             }
-            return null;
+            return false;
         }
 
 
         // 处理：目前指向blockable步但还没开始
         if(currentStepIsBlockableButNotStart(sid)) {
             System.out.println("currentStepIsBlockableButNotStart, need call block start");
-            WsHandler.sendToWsSession(sid, "currentStepIsBlockableButNotStart, need call block start");
-            return null;
+            CookingRuntime cookingRuntime = cookingMap.get(sid);
+            int curRecipeIdx = cookingRuntime.getCurrentRecipeIndex();
+            List<Recipe> recipes = cookingRuntime.getRecipes();
+            Recipe curRecipe = recipes.get(curRecipeIdx);
+            String dishName = curRecipe.getDishName();
+
+            int curStepIdx = cookingRuntime.getStepMap().get(curRecipeIdx);
+            Step step = curRecipe.getSteps().get(curStepIdx);
+
+            webSocketManager.send(sid,
+                    WSMessage.buildSuccess(NO_NEXT_STEP,
+                            "Current step is blockable but not started, need call START_BLOCKABLE !",
+                            toJsonStep(dishName,step))
+            );
+            return false;
         }
 
         if(gotoNextStepifPresent(sid)){
@@ -102,12 +122,18 @@ public class CookingServiceImpl implements CookingService {
             if(step.getIsBlockable()){
                 System.out.println("current step is blockable");
             }
-            return toJsonStep(dishName, step);
+
+            webSocketManager.send(sid,
+                    WSMessage.buildSuccess(REQUEST_NEXT, null, toJsonStep(dishName, step))
+            );
+            return true;
         } else if(!checkTasksExist(sid)) {
             // 没有下一步且没有菜在等待
-            WsHandler.sendToWsSession(sid, "all dishes done");
+            webSocketManager.send(sid,
+                    WSMessage.buildSuccess(NO_NEXT_STEP, "All dishes done !", null)
+            );
         }
-        return null;
+        return false;
 
     }
 
@@ -118,8 +144,25 @@ public class CookingServiceImpl implements CookingService {
             ScheduledFuture<?> task = e.getValue();
 //                Long delay = task.getDelay(TimeUnit.MINUTES);
             Long delay = task.getDelay(TimeUnit.SECONDS);
-            WsHandler.sendToWsSession(sid, key + "wait... left: " + delay + "seconds");
-//                WsHandler.sendToWsSession(sid, key + "wait... left: " + delay + "minutes");
+            int separator = key.indexOf('+');
+            int recipeIdx = Integer.parseInt(key.substring(0, separator));
+            int stepIdx = Integer.parseInt(key.substring(separator + 1));
+            Recipe recipe = cookingRuntime.getRecipes().get(recipeIdx);
+            String dishName = recipe.getDishName();
+            Step step = recipe.getSteps().get(stepIdx);
+
+            webSocketManager.send(sid,
+                    WSMessage.buildSuccess(NO_NEXT_STEP,
+                            "dish waiting ... " + delay + "seconds left !",
+                            toJsonStep(dishName, step)
+                    )
+            );
+//            webSocketManager.send(sid,
+//                    WSMessage.buildSuccess(NO_NEXT_STEP,
+//                            "dish waiting ... " + delay + "minutes left !",
+//                            toJsonStep(dishName, step)
+//                    )
+//            );
             return true;
         }
         return false;
@@ -151,8 +194,9 @@ public class CookingServiceImpl implements CookingService {
 //                    // 时间到后自动执行
 //                    this.finishBlockable(sid, curRecipeIdx);
 //                }, blockMinutes, TimeUnit.MINUTES);
-            cookingRuntime.getTaskMap()
-                    .put("RecipeIdx: " + String.valueOf(curRecipeIdx) + " StepIdx: " + String.valueOf(curStepIdx), future);
+            String curRecipeIdxStr = String.valueOf(curRecipeIdx);
+            String curStepIdxStr =  String.valueOf(curStepIdx);
+            cookingRuntime.getTaskMap().put(curRecipeIdxStr + "+" + curStepIdxStr, future);
         } else {
             return false;
         }
@@ -180,7 +224,12 @@ public class CookingServiceImpl implements CookingService {
 
         Step step = curRecipe.getSteps().get(curStepIdx);
 
-        WsHandler.sendToWsSession(sid, "BLOCK_FINISHED: " + toJsonStep(dishName, step));
+        webSocketManager.send(sid,
+                 WSMessage.buildSuccess(BLOCK_FINISHED,
+                         "Block finishedd ! Please go to deal the prev dish",
+                         toJsonStep(dishName, step)
+                 )
+        );
     }
 
 
@@ -229,11 +278,11 @@ public class CookingServiceImpl implements CookingService {
         return true;
     }
 
-    private String toJsonStep(String recipeName, Step step){
+    private JsonNode toJsonStep(String recipeName, Step step){
         ObjectNode node = M.createObjectNode().put("dishName", recipeName);
         JsonNode stepNode = M.valueToTree(step);
         node.setAll((ObjectNode) stepNode);
-        return node.toString();
+        return node;
     }
 
 
@@ -248,13 +297,16 @@ public class CookingServiceImpl implements CookingService {
         if(curStepIdx==-1){
             return false;
         }
+
+        String curRecipeIdxStr = String.valueOf(curRecipeIdx);
+        String curStepIdxStr =  String.valueOf(curStepIdx);
         if(recipe.getSteps().get(curStepIdx).getIsBlockable() &&
-                (!cookingRuntime.getTaskMap().containsKey("RecipeIdx: " + String.valueOf(curRecipeIdx) + " StepIdx: " + String.valueOf(curStepIdx)))){
+                (!cookingRuntime.getTaskMap().containsKey(curRecipeIdxStr + "+" + curStepIdxStr))){
             return true;
         }
         // 如果是blockable且已经做过，删掉记录
         if(recipe.getSteps().get(curStepIdx).getIsBlockable()){
-            cookingRuntime.getTaskMap().remove("RecipeIdx: " + String.valueOf(curRecipeIdx) + " StepIdx: " + String.valueOf(curStepIdx));
+            cookingRuntime.getTaskMap().remove(curRecipeIdxStr + "+" + curStepIdxStr);
         }
         return false;
     }

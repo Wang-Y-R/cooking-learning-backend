@@ -1,7 +1,7 @@
 package com.example.cooking.config;
 
 
-import com.example.cooking.common.web.WsHandler;
+import com.example.cooking.handler.WsHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
