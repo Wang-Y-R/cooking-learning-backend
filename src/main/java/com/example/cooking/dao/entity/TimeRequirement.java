@@ -1,8 +1,10 @@
 package com.example.cooking.dao.entity;
 
 import lombok.Data;
+import jakarta.persistence.Embeddable;
 
 @Data
+@Embeddable
 public class TimeRequirement {
     private String duration;     // 10分钟/30秒
     private String type;         // exact / range / until_condition

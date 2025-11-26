@@ -38,9 +38,9 @@ public class CookingServiceImpl implements CookingService {
         // 从数据库找并加入recipes
         for (com.fasterxml.jackson.databind.JsonNode n : dishNamesNode) {
             String name = n.asText();
-            Recipe r = recipeRepository.findByName(name);
-            if(r!=null){
-                recipes.add(r);
+            Optional<Recipe> recipeOpt = recipeRepository.findByDishName(name);
+            if(recipeOpt.isPresent()){
+                recipes.add(recipeOpt.get());
             }else{
                 System.err.println("no such dish: " + name);
                 return false;
@@ -309,6 +309,11 @@ public class CookingServiceImpl implements CookingService {
             cookingRuntime.getTaskMap().remove(curRecipeIdxStr + "+" + curStepIdxStr);
         }
         return false;
+    }
+
+    @Override
+    public Optional<CookingRuntime> getRuntime(String sid) {
+        return Optional.ofNullable(cookingMap.get(sid));
     }
 
 }

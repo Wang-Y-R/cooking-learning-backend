@@ -10,9 +10,15 @@ public interface CookingService {
 
     Boolean createSessionWithDishNames(String sid, JsonNode dishesName);
 
+    default boolean createSession(String sid, JsonNode dishesName) {
+        return createSessionWithDishNames(sid, dishesName);
+    }
+
 
     Boolean pollNextStepAndConsume(String sid);
 
     Boolean startBlockabled(String sid);
+
+    java.util.Optional<com.example.cooking.dao.entity.CookingRuntime> getRuntime(String sid);
 
 }

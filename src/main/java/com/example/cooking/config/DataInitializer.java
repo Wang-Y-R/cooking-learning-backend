@@ -35,10 +35,14 @@ public class DataInitializer implements CommandLineRunner {
             // 3. 解析为 List<Recipe>
             List<Recipe> recipes = objectMapper.readValue(is, new TypeReference<List<Recipe>>() {});
 
-            // 4. 全部加入内存 Repository
-            recipes.forEach(recipeRepository::addRecipe);
-
-            System.out.println(">>> Recipe data initialized, count = " + recipes.size());
+            // 4. 检查数据库是否已有数据，避免重复加载
+            if (recipeRepository.count() == 0) {
+                // 全部保存到数据库
+                recipeRepository.saveAll(recipes);
+                System.out.println(">>> Recipe data initialized, count = " + recipes.size());
+            } else {
+                System.out.println(">>> Recipe data already exists, skipping initialization");
+            }
         } finally {
             if (is != null) {
                 try { is.close(); } catch (IOException ignored) {}

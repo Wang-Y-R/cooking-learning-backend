@@ -1,29 +1,17 @@
 package com.example.cooking.dao.repository;
 
 import com.example.cooking.dao.entity.Recipe;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
+import java.util.Optional;
 import java.util.List;
 
 @Repository
-public class RecipeRepository {
-    private final List<Recipe> recipes = new ArrayList<>();
+public interface RecipeRepository extends JpaRepository<Recipe, Long> {
+    Optional<Recipe> findByDishName(String dishName);
 
-    public List<Recipe> findAll() {
-        return recipes;
-    }
+    List<Recipe> findByDishNameContainingIgnoreCase(String keyword);
 
-    public void addRecipe(Recipe recipe) {
-        recipes.add(recipe);
-    }
-
-    public Recipe findByName(String name){
-        for(Recipe r : recipes){
-            if(name.equals(r.getDishName())){
-                return r;
-            }
-        }
-        return null;
-    }
+    List<Recipe> findByCategoryIgnoreCase(String category);
 }
