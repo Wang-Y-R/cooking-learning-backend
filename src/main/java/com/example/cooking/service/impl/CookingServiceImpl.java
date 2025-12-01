@@ -279,6 +279,9 @@ public class CookingServiceImpl implements CookingService {
     }
 
     private JsonNode toJsonStep(String recipeName, Step step){
+        String imagePrefix = "/generated_images/" + recipeName + "/step_";
+        String imageName = String.format("%02d.png", step.getStepNumber()); // 补零到两位
+        step.setImageUrl(imagePrefix + imageName);
         ObjectNode node = M.createObjectNode().put("dishName", recipeName);
         JsonNode stepNode = M.valueToTree(step);
         node.setAll((ObjectNode) stepNode);

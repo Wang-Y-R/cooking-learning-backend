@@ -27,4 +27,7 @@ public class Step {
 
     @Column(length = 500)
     private String note;                         // 备注
+
+    @Transient
+    private String imageUrl; // 不映射到数据库，用于返回给前端
 }
