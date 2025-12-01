@@ -11,7 +11,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/recipes")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")  // 允许跨域访问
 public class RecipeController {
     private final RecipeRepository recipeRepository;
 
