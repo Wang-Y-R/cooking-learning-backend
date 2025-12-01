@@ -1,6 +1,6 @@
 #FileLock
-#Thu Nov 27 02:00:19 CST 2025
-server=127.0.1.1\:36255
-hostName=xqy-Legion-R7000P-APH8
+#Mon Dec 01 23:42:22 CST 2025
+server=192.168.43.232\:13366
+hostName=Picarran
 method=file
-id=19ac152c87f2a944c891ef0a4ff239957315c3df104
+id=19ada943fe4c336b101fc307e14a82b3eaea2e07533
