@@ -152,14 +152,6 @@ public class CookingServiceImpl implements CookingService {
             String dishName = recipe.getDishName();
             Step step = recipe.getSteps().get(stepIdx);
 
-            // 已经完成了的任务，但还没处理
-            // https://fcnd3knzrt0y.feishu.cn/wiki/KnJEwg96SiTzeDkLWeicRFFdnJb issue1
-            if(delay<0) {
-                cookingRuntime.setCurrentRecipeIndex(recipeIdx);
-                pollNextStepAndConsume(sid);
-                return true;
-            }
-
             webSocketManager.send(sid,
                     WSMessage.buildSuccess(NO_NEXT_STEP_BUT_WAITING,
                             "dish waiting ... " + delay + "seconds left !",
@@ -279,7 +271,21 @@ public class CookingServiceImpl implements CookingService {
         }
         // 遍历完了要做的菜也没找到下一步
         if(curRecipeIdx >= recipes.size()){
-            return false;
+//            return false;
+            // 从头开始遍历
+            // 已经完成了的任务，但还没处理
+            // https://fcnd3knzrt0y.feishu.cn/wiki/KnJEwg96SiTzeDkLWeicRFFdnJb issue1
+            curRecipeIdx = 0;
+            curStepIdx = stepMap.get(curRecipeIdx) + 1;
+            while (curRecipeIdx < recipes.size() &&  curStepIdx  >= recipes.get(curRecipeIdx).getSteps().size()){
+                curRecipeIdx++;
+                if(curRecipeIdx < recipes.size()) {
+                    curStepIdx = stepMap.get(curRecipeIdx) + 1;
+                }
+            }
+            if(curRecipeIdx >= recipes.size()) {
+                return false;
+            }
         }
         // 找到了,设置当前步的信息
         cookingRuntime.setCurrentRecipeIndex(curRecipeIdx);
