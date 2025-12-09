@@ -132,8 +132,9 @@ public class CookingServiceImpl implements CookingService {
             webSocketManager.send(sid,
                     WSMessage.buildSuccess(NO_NEXT_STEP, "All dishes done !", null)
             );
+            return false;
         }
-        return false;
+        return true;
 
     }
 
@@ -150,6 +151,14 @@ public class CookingServiceImpl implements CookingService {
             Recipe recipe = cookingRuntime.getRecipes().get(recipeIdx);
             String dishName = recipe.getDishName();
             Step step = recipe.getSteps().get(stepIdx);
+
+            // 已经完成了的任务，但还没处理
+            // https://fcnd3knzrt0y.feishu.cn/wiki/KnJEwg96SiTzeDkLWeicRFFdnJb issue1
+            if(delay<0) {
+                cookingRuntime.setCurrentRecipeIndex(recipeIdx);
+                pollNextStepAndConsume(sid);
+                return true;
+            }
 
             webSocketManager.send(sid,
                     WSMessage.buildSuccess(NO_NEXT_STEP,
