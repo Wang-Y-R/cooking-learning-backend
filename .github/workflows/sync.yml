@@ -5,7 +5,7 @@ permissions:
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # 每30分钟检查一次 (你可以根据需求调整)
+    - cron: '*/40 * * * *' # 每30分钟检查一次 (你可以根据需求调整)
   workflow_dispatch:       # 允许手动点击按钮触发同步
 
 jobs:
