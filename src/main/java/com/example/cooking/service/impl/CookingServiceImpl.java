@@ -82,7 +82,7 @@ public class CookingServiceImpl implements CookingService {
             if(!checkTasksExist(sid)) {
                 // 没有下一步且没有菜在等待
                 webSocketManager.send(sid,
-                        WSMessage.buildSuccess(NO_NEXT_STEP, "All dishes done !", null)
+                        WSMessage.buildSuccess(ALL_DISHES_DONE, "All dishes done !", null)
                 );
             }
             return false;
@@ -102,7 +102,7 @@ public class CookingServiceImpl implements CookingService {
             Step step = curRecipe.getSteps().get(curStepIdx);
 
             webSocketManager.send(sid,
-                    WSMessage.buildSuccess(NO_NEXT_STEP,
+                    WSMessage.buildSuccess(BLOCKABLE_NOT_START,
                             "Current step is blockable but not started, need call START_BLOCKABLE !",
                             toJsonStep(dishName,step))
             );
@@ -130,7 +130,7 @@ public class CookingServiceImpl implements CookingService {
         } else if(!checkTasksExist(sid)) {
             // 没有下一步且没有菜在等待
             webSocketManager.send(sid,
-                    WSMessage.buildSuccess(NO_NEXT_STEP, "All dishes done !", null)
+                    WSMessage.buildSuccess(ALL_DISHES_DONE, "All dishes done !", null)
             );
             return false;
         }
@@ -161,7 +161,7 @@ public class CookingServiceImpl implements CookingService {
             }
 
             webSocketManager.send(sid,
-                    WSMessage.buildSuccess(NO_NEXT_STEP,
+                    WSMessage.buildSuccess(NO_NEXT_STEP_BUT_WAITING,
                             "dish waiting ... " + delay + "seconds left !",
                             toJsonStep(dishName, step)
                     )
