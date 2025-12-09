@@ -145,6 +145,9 @@ public class CookingServiceImpl implements CookingService {
             ScheduledFuture<?> task = e.getValue();
 //                Long delay = task.getDelay(TimeUnit.MINUTES);
             Long delay = task.getDelay(TimeUnit.SECONDS);
+            if(delay<0) {
+                continue;
+            }
             int separator = key.indexOf('+');
             int recipeIdx = Integer.parseInt(key.substring(0, separator));
             int stepIdx = Integer.parseInt(key.substring(separator + 1));
@@ -262,8 +265,12 @@ public class CookingServiceImpl implements CookingService {
         Map<Integer,Integer> stepMap = cookingRuntime.getStepMap();
         // 取下一步
         int curStepIdx = stepMap.get(curRecipeIdx) + 1;
+        String curRecipeIdxStr = String.valueOf(curRecipeIdx);
+        String curStepIdxStr =  String.valueOf(curStepIdx - 1);
         // 当前的菜做完了，进入下一道
-        while (curRecipeIdx < recipes.size() &&  curStepIdx  >= recipes.get(curRecipeIdx).getSteps().size()){
+        while (curRecipeIdx < recipes.size() &&
+                (curStepIdx  >= recipes.get(curRecipeIdx).getSteps().size() ||
+                        (cookingRuntime.getTaskMap().containsKey(curRecipeIdxStr+'+'+curStepIdxStr) && !cookingRuntime.getTaskMap().get(curRecipeIdxStr+'+'+curStepIdxStr).isDone()))){
             curRecipeIdx++;
             if(curRecipeIdx < recipes.size()) {
                 curStepIdx = stepMap.get(curRecipeIdx) + 1;
@@ -277,7 +284,12 @@ public class CookingServiceImpl implements CookingService {
             // https://fcnd3knzrt0y.feishu.cn/wiki/KnJEwg96SiTzeDkLWeicRFFdnJb issue1
             curRecipeIdx = 0;
             curStepIdx = stepMap.get(curRecipeIdx) + 1;
-            while (curRecipeIdx < recipes.size() &&  curStepIdx  >= recipes.get(curRecipeIdx).getSteps().size()){
+
+            curRecipeIdxStr = String.valueOf(curRecipeIdx);
+            curStepIdxStr =  String.valueOf(curStepIdx - 1);
+            while (curRecipeIdx < recipes.size() &&
+                    (curStepIdx  >= recipes.get(curRecipeIdx).getSteps().size() ||
+                            (cookingRuntime.getTaskMap().containsKey(curRecipeIdxStr+'+'+curStepIdxStr) && !cookingRuntime.getTaskMap().get(curRecipeIdxStr+'+'+curStepIdxStr).isDone()))){
                 curRecipeIdx++;
                 if(curRecipeIdx < recipes.size()) {
                     curStepIdx = stepMap.get(curRecipeIdx) + 1;
